@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='common.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>YOLO Training</title>
+</head>
+<body>
+    <h2>YOLO Training</h2>
+    <form action="{{ url_for('train_yolo') }}" method="post" onsubmit="setCustomValue()">
+        <label for="model">Model:</label>
+        <select name="model" id="model" onchange="checkCustomOption()">
+            <option value="yolov8n.pt">YOLOv8n</option>
+            <option value="yolov8s.pt">YOLOv8s</option>
+            <option value="yolov8m.pt">YOLOv8m</option>
+            <option value="yolov8l.pt">YOLOv8l</option>
+            <option value="yolov8x.pt">YOLOv8x</option>
+            <option value="transfer_mode">Transfer</option>
+            <option value="resume_mode">Resume</option>
+        </select>
+
+        <div id="transferInput" style="display: none;">
+            <label for="transferPath">Transfer Path:</label>
+            <input type="text" name="transferPath" id="transferPath">
+
+            <label for="pretrained">Pretrained:</label>
+            <input type="checkbox" name="pretrained" id="pretrained" checked>
+        </div>
+
+        <div id="params" style="display: block;">
+            <label for="data">Data:</label>
+            <input type="text" name="data" id="data" value="cfg/datasets/text.yaml" required>
+
+            <label for="epochs">Epochs:</label>
+            <input type="number" name="epochs" id="epochs" value="100" required>
+
+            <label for="patience">Patience:</label>
+            <input type="number" name="patience" id="patience" value="0" required>
+
+            <label for="batch">Batch Size:</label>
+            <select name="batch" id="batch" required>
+                {% for batch in range(1, 257) %}
+                    {% if batch == 1 or batch % 2 == 0 %}
+                        <option value="{{ batch }}">{{ batch }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            
+            <label for="imgsz">Image Size:</label>
+            <select name="imgsz" id="imgsz" required>
+                {% for size in range(224, 1921, 32) %}
+                    <option value="{{ size }}">{{ size }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="project">Project:</label>
+            <input type="text" name="project" id="project" value="runs" required>
+
+            <label for="name">Name:</label>
+            <input type="text" name="name" id="name" value="train" required>
+
+            <label for="optimizer">Optimizer:</label>
+            <select name="optimizer" id="optimizer">
+                <option value="SGD">SGD</option>
+                <option value="Adam">Adam</option>
+                <option value="Adamax">Adamax</option>
+                <option value="AdamW">AdamW</option>
+                <option value="NAdam">NAdam</option>
+                <option value="RAdam">RAdam</option>
+                <option value="RMSProp">RMSProp</option>
+                <option value="auto">Auto</option>
+            </select>
+
+            <label for="seed">Seed:</label>
+            <input type="number" name="seed" id="seed" value="0">
+
+            <label for="cos_lr">Cosine LR:</label>
+            <input type="checkbox" name="cos_lr" id="cos_lr">
+
+            <label for="lr0">Initial LR:</label>
+            <input type="text" name="lr0" id="lr0" value="0.01">
+
+            <label for="lrf">Final LR:</label>
+            <input type="text" name="lrf" id="lrf" value="0.01">
+        </div>
+
+        <div id="resumeInput" style="display: none;">
+            <label for="resumePath">Resume Path:</label>
+            <input type="text" name="resumePath" id="resumePath">
+
+            <label for="resume">Resume:</label>
+            <input type="checkbox" name="resume" id="resume">
+        </div>
+
+        <button type="submit">Train YOLO</button>
+    </form>
+
+    <form action="{{ url_for('stop_yolo') }}" method="post">
+        <button type="submit" onclick="stopTrain(action)">Stop YOLO</button>
+    </form>
+
+    <div id="log-container"></div>
+    <script>setupEventSource();</script>
+</body>
+</html>

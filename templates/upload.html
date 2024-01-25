@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='common.js') }}"></script>
+    <title>데이터 파일 업로드</title>
+</head>
+<body>
+    <h2>데이터 파일 업로드</h2>
+
+    <form id="upload-form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+        <!-- 드래그 앤 드롭 영역 -->
+        <div id="drop-area" class="drop-area">
+            <span>파일을 여기에 드래그 앤 드롭 또는 클릭하여 선택하세요.</span>
+            <input type="file" name="file" id="fileInput" multiple>
+        </div>
+
+        <!-- 업로드 버튼 -->
+        <button type="submit">업로드</button>
+    </form>
+</body>
+</html>

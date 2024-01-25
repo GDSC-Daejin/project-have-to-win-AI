@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>앱 대시보드</title>
+</head>
+<body>
+    <h1>앱 대시보드</h1>
+    <ul>
+        <li><a href="{{ url_for('upload') }}">데이터 업로드</a></li>
+        <li><a href="{{ url_for('preprocess') }}">데이터 전처리</a></li>
+        <li><a href="{{ url_for('train_yolo') }}">YOLO Training</a></li>
+        <li><a href="{{ url_for('train_trocr') }}">TrOCR Training</a></li>
+    </ul>
+</body>
+</html>

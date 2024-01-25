@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>데이터 전처리</title>
+</head>
+<body>
+    <h2>데이터 전처리</h2>
+    <form action="{{ url_for('preprocess') }}" method="post">
+        <select name="mode" id="mode">
+            <option value="train">Train</option>
+            <option value="val">Validation</option>
+            <option value="test">Test</option>
+        </select>
+        <button type="submit">데이터 전처리 실행</button>
+    </form>
+</body>
+</html>

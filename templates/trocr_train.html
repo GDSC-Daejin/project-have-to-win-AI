@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='common.js') }}"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <title>TrOCR Training</title>
+</head>
+<body>
+    <h2>TrOCR Training</h2>
+    <form action="{{ url_for('train_trocr') }}" method="post">
+        <label for="epochs">Epochs:</label>
+        <input type="number" name="epochs" id="epochs" value="1" required>
+
+        <label for="batch">Batch Size:</label>
+        <select name="batch" id="batch" required>
+            {% for batch in range(1, 257) %}
+                {% if batch == 1 or batch % 2 == 0 %}
+                    <option value="{{ batch }}">{{ batch }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+
+        <label for="lr">Initial LR:</label>
+        <select name="lr" id="lr" required>
+            {% for size in range(0, 11) %}
+                <option value="10e-{{ size }}">10e-{{ size }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="save">Save splits(1 epoch 당 몇번 save 할지):</label>
+        <input type="number" name="save" id="save" value="1" required>
+
+        <label for="eval">Eval splits(1 epoch 당 몇번 eval 할지):</label>
+        <input type="number" name="eval" id="eval" value="1" required>
+
+        <label for="resume">Resume:</label>
+        <input type="checkbox" name="resume" id="resume">
+
+        <button type="submit">Train TrOCR</button>
+    </form>
+
+    <form action="{{ url_for('stop_trocr') }}" method="post">
+        <button type="submit" onclick="stopTrain(action)">Stop TrOCR</button>
+    </form>
+    
+    <div id="log-container"></div>
+    <script>setupEventSource();</script>
+</body>
+</html>
