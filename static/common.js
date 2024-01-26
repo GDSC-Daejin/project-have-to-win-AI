@@ -33,14 +33,27 @@ function handleFileSelect(e) {
 function setupEventSource() {
     const eventSource = new EventSource("/stream_logs");
     const logContainer = document.getElementById("log-container");
+    const maxLines = 15; // 원하는 최대 로그 라인 수
 
-    eventSource.onmessage = function(event) {
+    eventSource.onmessage = function (event) {
         const logMessage = event.data;
-        logContainer.innerHTML += logMessage;
+
+        // 현재 로그 라인 수를 계산
+        const currentLines = logContainer.children.length;
+
+        // 현재 로그 라인 수가 최대 라인 수를 초과하면 일부를 제거
+        if (currentLines >= maxLines) {
+            logContainer.removeChild(logContainer.firstElementChild);
+        }
+
+        // 새로운 로그 메시지를 추가하고 스크롤을 최하단으로 이동
+        const newLogLine = document.createElement('div');
+        newLogLine.textContent = logMessage; // 또는 innerHTML을 사용하여 HTML 삽입
+        logContainer.appendChild(newLogLine);
         logContainer.scrollTop = logContainer.scrollHeight;
     };
 
-    eventSource.onerror = function(event) {
+    eventSource.onerror = function (event) {
         eventSource.close();
     };
 }

@@ -1,5 +1,6 @@
 import os
 import threading
+from datetime import datetime
 from subprocess import Popen, PIPE, STDOUT
 from typing import Iterator, List, NoReturn
 from modules.preprocessing import preprocessing
@@ -14,7 +15,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # 서브프로세스 및 로그 관련 변수
 yolo_process: Popen[str] = None
 trocr_process: Popen[str] = None
-log_buffer: list = []
+log_buffer: List[str] = []
+log_entry_list: List[str] = []
 
 
 def allowed_file(filename: str) -> bool:
@@ -138,23 +140,47 @@ def start_trocr_train(
 # YOLO Training 서브프로세스 중단 함수
 def stop_yolo_train() -> NoReturn:
     global yolo_process
+    global log_entry_list
+    model = 'YOLO'
     if yolo_process is not None and yolo_process.poll() is None:
         yolo_process.terminate()
+        create_log_file(log_entry_list, model)
 
 
 # TrOCR Training 서브프로세스 중단 함수
 def stop_trocr_train() -> NoReturn:
     global trocr_process
+    global log_entry_list
+    model = 'TrOCR'
     if trocr_process is not None and trocr_process.poll() is None:
         trocr_process.terminate()
+        create_log_file(log_entry_list, model)
 
 
 # 주기적으로 로그를 확인하여 브라우저에 업데이트
 def check_logs() -> Iterator[str]:
     global log_buffer
+    global log_entry_list
+    log_entry_list.clear()
     while True:
         if log_buffer:
-            yield 'data: ' + log_buffer.pop(0).replace('\n', '<br>') + '\n\n'
+            log_entry = log_buffer.pop(0)
+            log_entry_list.append(log_entry)
+
+            yield 'data: ' + log_entry + '\n\n'
+
+
+def create_log_file(log_entry_list, model):
+    log_folder = 'log'
+
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file_path = os.path.join(log_folder, f"{model}_log_file_{current_time}.txt")
+
+    with open(log_file_path, 'w', encoding='utf-8') as file:
+        file.writelines(log_entry_list)
 
 
 @app.route('/')
