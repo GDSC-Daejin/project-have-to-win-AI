@@ -8,7 +8,8 @@ def delete_files_with_classes(folder_path: str) -> None:
         if 'classes' in filename:
             file_path = os.path.join(folder_path, filename)
             os.remove(file_path)
-            print(f"Deleted: {file_path}                    ", end='\r', flush=True)
+            print(f"Deleted: {file_path}                                ", end='\r', flush=True)
+    print("                                                                                                ", end='\r')
 
 
 def moving_images(source_directory: str, destination_directory: str) -> None:
@@ -21,7 +22,8 @@ def moving_images(source_directory: str, destination_directory: str) -> None:
             source_path = os.path.join(source_directory, filename)
             destination_path = os.path.join(destination_directory, filename)
             shutil.move(source_path, destination_path)
-            print(f"Moved: {source_path} => {destination_path}                  ", end='\r', flush=True)
+            print(f"Moved: {source_path} => {destination_path}                                ", end='\r', flush=True)
+    print("                                                                                                ", end='\r')
 
     if os.path.exists(source_directory):
         shutil.rmtree(source_directory)

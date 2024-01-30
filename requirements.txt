@@ -1,7 +1,7 @@
 accelerate 
 albumentations
 evaluate
-flask
+fastapi
 ipykernel
 ipywidgets
 jiwer
@@ -11,11 +11,13 @@ opencv-python
 pandas
 pillow
 pynvml
+python-multipart
 seaborn
 scipy
 transformers==4.30.2
 tqdm
 ultralytics
+uvicorn
 --extra-index-url https://download.pytorch.org/whl/cu118
 torch
 --extra-index-url https://download.pytorch.org/whl/cu118

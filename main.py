@@ -4,13 +4,17 @@ from datetime import datetime
 from subprocess import Popen, PIPE, STDOUT
 from typing import Iterator, List, NoReturn
 from modules.preprocessing import preprocessing
-from flask import Flask, render_template, request
+from fastapi import FastAPI, Request, UploadFile
+from fastapi.responses import StreamingResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 UPLOAD_FOLDER: str = 'uploads'
 ALLOWED_EXTENSIONS: set[str] = {'txt', 'png', 'jpg', 'jpeg'}
 
-app: Flask = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # 서브프로세스 및 로그 관련 변수
 yolo_process: Popen[str] = None
@@ -24,14 +28,14 @@ def allowed_file(filename: str) -> bool:
 
 
 # 파일 업로드 함수
-def save_uploaded_files(directory: str, files: str) -> None:
+def save_uploaded_files(directory: str, files: List[UploadFile]) -> None:
     if not os.path.exists(directory):
         os.makedirs(directory)
 
     for file in files:
         if file and allowed_file(file.filename):
             with open(os.path.join(directory, file.filename), 'wb') as f:
-                f.write(file.read())
+                f.write(file.file.read())
             print(f'파일 {file.filename} 업로드 성공!')
         else:
             print(f'파일 {file.filename} 업로드 실패 - 허용되지 않는 확장자')
@@ -167,10 +171,10 @@ def check_logs() -> Iterator[str]:
             log_entry = log_buffer.pop(0)
             log_entry_list.append(log_entry)
 
-            yield 'data: ' + log_entry + '\n\n'
+            yield f'data: {log_entry}\n\n'.encode('utf-8')
 
 
-def create_log_file(log_entry_list, model):
+def create_log_file(log_entry_list: List[str], model: str) -> None:
     log_folder = 'log'
 
     if not os.path.exists(log_folder):
@@ -184,45 +188,48 @@ def create_log_file(log_entry_list, model):
 
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.route('/upload', methods=['GET', 'POST'])
-def upload():
+async def upload(request: Request):
     if request.method == 'POST':
-        img_files = request.files.getlist('file')
+        form_data = await request.form()
+        img_files = form_data.getlist('file')
         if img_files:
-            save_uploaded_files(app.config['UPLOAD_FOLDER'], img_files)
-    return render_template('upload.html')
+            save_uploaded_files(UPLOAD_FOLDER, img_files)
+    return templates.TemplateResponse("upload.html", {"request": request})
 
 
 @app.route('/preprocess', methods=['GET', 'POST'])
-def preprocess():
+async def preprocess(request: Request):
     if request.method == 'POST':
-        mode = request.form.get('mode')
-        preprocessing(app.config['UPLOAD_FOLDER'], mode)
-    return render_template('preprocess.html')
+        form_data = await request.form()
+        mode = form_data.get('mode')
+        preprocessing(UPLOAD_FOLDER, mode)
+    return templates.TemplateResponse("preprocess.html", {"request": request})
 
 
 @app.route('/yolo_train', methods=['GET', 'POST'])
-def train_yolo():
+async def train_yolo(request: Request):
     if request.method == 'POST':
-        model = request.form.get('model')
-        data = request.form.get('data')
-        epochs = int(request.form.get('epochs'))
-        patience = int(request.form.get('patience'))
-        batch = int(request.form.get('batch'))
-        imgsz = int(request.form.get('imgsz'))
-        project = request.form.get('project')
-        name = request.form.get('name')
-        pretrained = 'pretrained' in request.form
-        optimizer = request.form.get('optimizer')
-        seed = int(request.form.get('seed'))
-        cos_lr = 'cos_lr' in request.form
-        resume = 'resume' in request.form
-        lr0 = float(request.form.get('lr0'))
-        lrf = float(request.form.get('lrf'))
+        form_data = await request.form()
+        model = form_data.get('model')
+        data = form_data.get('data')
+        epochs = int(form_data.get('epochs'))
+        patience = int(form_data.get('patience'))
+        batch = int(form_data.get('batch'))
+        imgsz = int(form_data.get('imgsz'))
+        project = form_data.get('project')
+        name = form_data.get('name')
+        pretrained = 'pretrained' in form_data
+        optimizer = form_data.get('optimizer')
+        seed = int(form_data.get('seed'))
+        cos_lr = 'cos_lr' in form_data
+        resume = 'resume' in form_data
+        lr0 = float(form_data.get('lr0'))
+        lrf = float(form_data.get('lrf'))
 
         threading.Thread(
             target=start_yolo_train,
@@ -245,18 +252,19 @@ def train_yolo():
             )
         ).start()
 
-    return render_template('yolo_train.html')
+    return templates.TemplateResponse("yolo_train.html", {"request": request})
 
 
 @app.route('/trocr_train', methods=['GET', 'POST'])
-def train_trocr():
+async def train_trocr(request: Request):
     if request.method == 'POST':
-        epochs = int(request.form.get('epochs'))
-        batch = int(request.form.get('batch'))
-        lr = float(request.form.get('lr'))
-        save_splits = int(request.form.get('save'))
-        eval_splits = int(request.form.get('eval'))
-        resume = 'resume' in request.form
+        form_data = await request.form()
+        epochs = int(form_data.get('epochs'))
+        batch = int(form_data.get('batch'))
+        lr = float(form_data.get('lr'))
+        save_splits = int(form_data.get('save'))
+        eval_splits = int(form_data.get('eval'))
+        resume = 'resume' in form_data
 
         threading.Thread(
             target=start_trocr_train,
@@ -270,24 +278,26 @@ def train_trocr():
             )
         ).start()
 
-    return render_template('trocr_train.html')
+    return templates.TemplateResponse("trocr_train.html", {"request": request})
 
 
 @app.route('/stop_yolo_train', methods=['POST'])
-def stop_yolo():
+async def stop_yolo(request: Request):
     threading.Thread(target=stop_yolo_train).start()
-    return render_template('yolo_train.html')
+    return templates.TemplateResponse("yolo_train.html", {"request": request})
 
 
 @app.route('/stop_trocr_train', methods=['POST'])
-def stop_trocr():
+async def stop_trocr(request: Request):
     threading.Thread(target=stop_trocr_train).start()
-    return render_template('trocr_train.html')
+    return templates.TemplateResponse("trocr_train.html", {"request": request})
 
 
-@app.route('/stream_logs')
-def stream_logs():
-    return check_logs(), 200, {'Content-Type': 'text/event-stream'}
+@app.route('/stream_logs', methods=['GET'])
+async def stream_logs(request: Request):
+    return StreamingResponse(check_logs(), media_type="text/event-stream")
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app)

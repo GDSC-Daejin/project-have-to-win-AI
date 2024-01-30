@@ -18,7 +18,7 @@ def process_image(
         lines = text_file.readlines()
 
     # 이미지 읽기
-    image = Image.open(image_file_path)
+    image = Image.open(image_file_path).convert("RGB")
     image_width, image_height = image.size
 
     with open(output_text_file, 'a') as text_file:
@@ -40,7 +40,7 @@ def process_image(
             new_image_path = f'{output_folder_path}/{new_image_name}'
 
             # 이미지 저장
-            cropped_image.save(new_image_path)
+            cropped_image.save(new_image_path, 'JPEG')
             print(f"Processed and saved: {new_image_path}                   ", end='\r', flush=True)
 
             # 텍스트 파일에 경로와 단어 기록
