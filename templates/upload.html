@@ -10,6 +10,7 @@
 <body>
     <h2>데이터 파일 업로드</h2>
 
+    <!-- 업로드 폼 -->
     <form id="upload-form" action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
         <!-- 드래그 앤 드롭 영역 -->
         <div id="drop-area" class="drop-area">
@@ -17,8 +18,15 @@
             <input type="file" name="file" id="fileInput" multiple>
         </div>
 
-        <!-- 업로드 버튼 -->
-        <button type="submit">업로드</button>
+        <!-- 버튼 -->
+        <div class="button-container">
+            <button type="submit">업로드</button>
+            <button type="submit" form="delete-form" onclick="return confirm('업로드한 파일을 삭제하시겠습니까?')">삭제</button>
+        </div>
+    </form>
+    
+    <!-- 삭제 폼 -->
+    <form id="delete-form" action="{{ url_for('delete_folder') }}" method="post">
     </form>
 </body>
 </html>

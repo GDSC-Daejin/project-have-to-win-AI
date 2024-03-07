@@ -1,16 +1,18 @@
 import os
+import shutil
+import zipfile
 import threading
 from datetime import datetime
 from subprocess import Popen, PIPE, STDOUT
 from typing import Iterator, List, NoReturn
 from modules.preprocessing import preprocessing
 from fastapi import FastAPI, Request, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 UPLOAD_FOLDER: str = 'uploads'
-ALLOWED_EXTENSIONS: set[str] = {'txt', 'png', 'jpg', 'jpeg'}
+ALLOWED_EXTENSIONS: set[str] = {'zip'}
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -34,9 +36,24 @@ def save_uploaded_files(directory: str, files: List[UploadFile]) -> None:
 
     for file in files:
         if file and allowed_file(file.filename):
-            with open(os.path.join(directory, file.filename), 'wb') as f:
+            file_path = os.path.join(directory, file.filename)
+            with open(file_path, 'wb') as f:
                 f.write(file.file.read())
             print(f'파일 {file.filename} 업로드 성공!')
+            
+            # 업로드된 파일이 zip 파일인지 확인
+            if file.filename.endswith('.zip'):
+                # zip 파일의 내용을 압축 해제
+                zip_file_path = file_path
+                extract_path = directory
+                with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_path)
+                print(f'파일 {file.filename} 압축 풀기 완료!')
+                
+                # 원본 zip 파일 삭제
+                os.remove(zip_file_path)
+                print(f'파일 {file.filename} 삭제 완료!')
+
         else:
             print(f'파일 {file.filename} 업로드 실패 - 허용되지 않는 확장자')
 
@@ -200,6 +217,20 @@ async def upload(request: Request):
         if img_files:
             save_uploaded_files(UPLOAD_FOLDER, img_files)
     return templates.TemplateResponse("upload.html", {"request": request})
+
+
+@app.route('/delete_folder', methods=['POST'])
+async def delete_folder(request: Request):
+    try:
+        if os.path.exists(UPLOAD_FOLDER):
+            shutil.rmtree(UPLOAD_FOLDER)
+            print(f"폴더 '{UPLOAD_FOLDER}' 삭제 성공!")
+        else:
+            print(f"폴더 '{UPLOAD_FOLDER}' 삭제 실패 - 존재하지 않는 폴더")
+    except Exception as e:
+        print(f"폴더 '{UPLOAD_FOLDER}' 삭제 중 오류 발생: {str(e)}")
+
+    return RedirectResponse(url=request.url_for("upload"), status_code=303)
 
 
 @app.route('/preprocess', methods=['GET', 'POST'])
