@@ -78,6 +78,7 @@ def start_yolo_train(
 ) -> None:
         
     global yolo_process, log_buffer
+    global log_entry_list
     log_buffer.clear()
 
     # Construct the command based on the received arguments
@@ -115,6 +116,8 @@ def start_yolo_train(
     while yolo_process.poll() is None:
         line: str = yolo_process.stdout.readline()
         log_buffer.append(line)
+    
+    create_log_file(log_entry_list, 'YOLO')
 
 
 # TrOCR Training 서브프로세스 실행 함수
@@ -128,6 +131,7 @@ def start_trocr_train(
 ) -> None:
     
     global trocr_process, log_buffer
+    global log_entry_list
     log_buffer.clear()
 
     # Construct the command based on the received arguments
@@ -156,26 +160,26 @@ def start_trocr_train(
     while trocr_process.poll() is None:
         line: str = trocr_process.stdout.readline()
         log_buffer.append(line)
+    
+    create_log_file(log_entry_list, 'TrOCR')
 
 
 # YOLO Training 서브프로세스 중단 함수
 def stop_yolo_train() -> NoReturn:
     global yolo_process
     global log_entry_list
-    model = 'YOLO'
     if yolo_process is not None and yolo_process.poll() is None:
         yolo_process.terminate()
-        create_log_file(log_entry_list, model)
+        create_log_file(log_entry_list, 'YOLO')
 
 
 # TrOCR Training 서브프로세스 중단 함수
 def stop_trocr_train() -> NoReturn:
     global trocr_process
     global log_entry_list
-    model = 'TrOCR'
     if trocr_process is not None and trocr_process.poll() is None:
         trocr_process.terminate()
-        create_log_file(log_entry_list, model)
+        create_log_file(log_entry_list, 'TrOCR')
 
 
 # 주기적으로 로그를 확인하여 브라우저에 업데이트
@@ -204,23 +208,27 @@ def create_log_file(log_entry_list: List[str], model: str) -> None:
         file.writelines(log_entry_list)
 
 
-@app.route('/')
+@app.get('/')
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.get('/upload')
 async def upload(request: Request):
-    if request.method == 'POST':
-        form_data = await request.form()
-        img_files = form_data.getlist('file')
-        if img_files:
-            save_uploaded_files(UPLOAD_FOLDER, img_files)
     return templates.TemplateResponse("upload.html", {"request": request})
 
 
-@app.route('/delete_folder', methods=['POST'])
-async def delete_folder(request: Request):
+@app.post('/upload')
+async def upload(request: Request):
+    form_data = await request.form()
+    img_files = form_data.getlist('file')
+    if img_files:
+        save_uploaded_files(UPLOAD_FOLDER, img_files)
+    return templates.TemplateResponse("upload.html", {"request": request})
+
+
+@app.post('/delete_uploads')
+async def delete_uploads(request: Request):
     try:
         if os.path.exists(UPLOAD_FOLDER):
             shutil.rmtree(UPLOAD_FOLDER)
@@ -233,98 +241,125 @@ async def delete_folder(request: Request):
     return RedirectResponse(url=request.url_for("upload"), status_code=303)
 
 
-@app.route('/preprocess', methods=['GET', 'POST'])
+@app.get('/preprocess')
 async def preprocess(request: Request):
-    if request.method == 'POST':
-        form_data = await request.form()
-        mode = form_data.get('mode')
-        preprocessing(UPLOAD_FOLDER, mode)
     return templates.TemplateResponse("preprocess.html", {"request": request})
 
 
-@app.route('/yolo_train', methods=['GET', 'POST'])
-async def train_yolo(request: Request):
-    if request.method == 'POST':
-        form_data = await request.form()
-        model = form_data.get('model')
-        data = form_data.get('data')
-        epochs = int(form_data.get('epochs'))
-        patience = int(form_data.get('patience'))
-        batch = int(form_data.get('batch'))
-        imgsz = int(form_data.get('imgsz'))
-        project = form_data.get('project')
-        name = form_data.get('name')
-        pretrained = 'pretrained' in form_data
-        optimizer = form_data.get('optimizer')
-        seed = int(form_data.get('seed'))
-        cos_lr = 'cos_lr' in form_data
-        resume = 'resume' in form_data
-        lr0 = float(form_data.get('lr0'))
-        lrf = float(form_data.get('lrf'))
+@app.post('/preprocess')
+async def preprocess(request: Request):
+    form_data = await request.form()
+    mode = form_data.get('mode')
+    preprocessing(UPLOAD_FOLDER, mode)
+    return templates.TemplateResponse("preprocess.html", {"request": request})
 
-        threading.Thread(
-            target=start_yolo_train,
-            args=(
-                model,
-                data,
-                epochs,
-                patience,
-                batch,
-                imgsz,
-                project,
-                name,
-                pretrained,
-                optimizer,
-                seed,
-                cos_lr,
-                resume,
-                lr0,
-                lrf
-            )
-        ).start()
+
+@app.post('/delete_datasets')
+async def delete_datasets(request: Request):
+    target = 'datasets'
+    try:
+        if os.path.exists(target):
+            shutil.rmtree(target)
+            print(f"폴더 '{target}' 삭제 성공!")
+        else:
+            print(f"폴더 '{target}' 삭제 실패 - 존재하지 않는 폴더")
+    except Exception as e:
+        print(f"폴더 '{target}' 삭제 중 오류 발생: {str(e)}")
+
+    return RedirectResponse(url=request.url_for("preprocess"), status_code=303)
+
+
+@app.get('/yolo_train')
+async def train_yolo(request: Request):
+    return templates.TemplateResponse("yolo_train.html", {"request": request})
+
+
+@app.post('/yolo_train')
+async def train_yolo(request: Request):
+    form_data = await request.form()
+    model = form_data.get('model')
+    data = form_data.get('data')
+    epochs = int(form_data.get('epochs'))
+    patience = int(form_data.get('patience'))
+    batch = int(form_data.get('batch'))
+    imgsz = int(form_data.get('imgsz'))
+    project = form_data.get('project')
+    name = form_data.get('name')
+    pretrained = 'pretrained' in form_data
+    optimizer = form_data.get('optimizer')
+    seed = int(form_data.get('seed'))
+    cos_lr = 'cos_lr' in form_data
+    resume = 'resume' in form_data
+    lr0 = float(form_data.get('lr0'))
+    lrf = float(form_data.get('lrf'))
+
+    threading.Thread(
+        target=start_yolo_train,
+        args=(
+            model,
+            data,
+            epochs,
+            patience,
+            batch,
+            imgsz,
+            project,
+            name,
+            pretrained,
+            optimizer,
+            seed,
+            cos_lr,
+            resume,
+            lr0,
+            lrf
+        )
+    ).start()
 
     return templates.TemplateResponse("yolo_train.html", {"request": request})
 
 
-@app.route('/trocr_train', methods=['GET', 'POST'])
+@app.get('/trocr_train')
 async def train_trocr(request: Request):
-    if request.method == 'POST':
-        form_data = await request.form()
-        epochs = int(form_data.get('epochs'))
-        batch = int(form_data.get('batch'))
-        lr = float(form_data.get('lr'))
-        save_splits = int(form_data.get('save'))
-        eval_splits = int(form_data.get('eval'))
-        resume = 'resume' in form_data
+    return templates.TemplateResponse("trocr_train.html", {"request": request})
 
-        threading.Thread(
-            target=start_trocr_train,
-            args=(
-                epochs,
-                batch,
-                lr,
-                save_splits,
-                eval_splits,
-                resume
-            )
-        ).start()
+
+@app.post('/trocr_train')
+async def train_trocr(request: Request):
+    form_data = await request.form()
+    epochs = int(form_data.get('epochs'))
+    batch = int(form_data.get('batch'))
+    lr = float(form_data.get('lr'))
+    save_splits = int(form_data.get('save'))
+    eval_splits = int(form_data.get('eval'))
+    resume = 'resume' in form_data
+
+    threading.Thread(
+        target=start_trocr_train,
+        args=(
+            epochs,
+            batch,
+            lr,
+            save_splits,
+            eval_splits,
+            resume
+        )
+    ).start()
 
     return templates.TemplateResponse("trocr_train.html", {"request": request})
 
 
-@app.route('/stop_yolo_train', methods=['POST'])
+@app.post('/stop_yolo_train')
 async def stop_yolo(request: Request):
     threading.Thread(target=stop_yolo_train).start()
     return templates.TemplateResponse("yolo_train.html", {"request": request})
 
 
-@app.route('/stop_trocr_train', methods=['POST'])
+@app.post('/stop_trocr_train')
 async def stop_trocr(request: Request):
     threading.Thread(target=stop_trocr_train).start()
     return templates.TemplateResponse("trocr_train.html", {"request": request})
 
 
-@app.route('/stream_logs', methods=['GET'])
+@app.get('/stream_logs')
 async def stream_logs(request: Request):
     return StreamingResponse(check_logs(), media_type="text/event-stream")
 

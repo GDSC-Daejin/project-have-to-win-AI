@@ -14,7 +14,12 @@
             <option value="val">Validation</option>
             <option value="test">Test</option>
         </select>
-        <button type="submit">데이터 전처리 실행</button>
+        <div class="button-container">
+            <button type="submit">데이터 전처리 실행</button>
+            <button type="submit" form="delete-form" onclick="return confirm('전처리한 파일을 삭제하시겠습니까?')">삭제</button>
+        </div>
+    </form>
+    <form id="delete-form" action="{{ url_for('delete_datasets') }}" method="post">
     </form>
 </body>
 </html>
